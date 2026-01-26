@@ -1,0 +1,131 @@
+@startuml fino-edinet-collector-class-structured
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+title fino-edinet-collector - Class Interface (Structured by Layer)
+
+' ========================
+' application layer
+' ========================
+package "application" {
+
+  class Edinet <<Facade>> {
+    + sync() : None
+    + search(
+        company: str = None,
+        date_from: date = None,
+        date_to: date = None,
+        doc_type: str = None
+      ) : list[Filing]
+    + download(
+        filings: list[Filing],
+        path: Path
+      ) : None
+  }
+
+  class SyncDocumentsUseCase <<UseCase>> {
+    + execute() : None
+  }
+
+  class SearchDocumentsUseCase <<UseCase>> {
+    + execute(
+        company: str = None,
+        date_from: date = None,
+        date_to: date = None,
+        doc_type: str = None
+      ) : list[Filing]
+  }
+
+  class DownloadDocumentsUseCase <<UseCase>> {
+    + execute(
+        filings: list[Filing],
+        path: Path
+      ) : None
+  }
+}
+
+' ========================
+' domain layer
+' ========================
+package "domain" {
+
+  class Filing <<Entity>> {
+    + document_id: str
+    + edinet_code: str
+    + filer_name: str
+    + doc_type: str
+    + submit_date: date
+    + file_url: str
+
+    + is_valid() : bool
+  }
+
+  interface FilingRepository <<Interface>> {
+    + save(filing: Filing) : None
+    + bulk_save(filings: list[Filing]) : None
+    + find_by_conditions(
+        company: str = None,
+        date_from: date = None,
+        date_to: date = None,
+        doc_type: str = None
+      ) : list[Filing]
+    + exists(document_id: str) : bool
+  }
+}
+
+' ========================
+' adapters layer
+' ========================
+package "adapters" {
+
+  class SQLiteFilingRepository <<Repository>> {
+    + save(filing: Filing) : None
+    + bulk_save(filings: list[Filing]) : None
+    + find_by_conditions(
+        company: str = None,
+        date_from: date = None,
+        date_to: date = None,
+        doc_type: str = None
+      ) : list[Filing]
+    + exists(document_id: str) : bool
+  }
+
+  class DynamoFilingRepository <<Repository>> {
+    + save(filing: Filing) : None
+    + bulk_save(filings: list[Filing]) : None
+    + find_by_conditions(
+        company: str = None,
+        date_from: date = None,
+        date_to: date = None,
+        doc_type: str = None
+      ) : list[Filing]
+    + exists(document_id: str) : bool
+  }
+
+  class EdinetApiClient <<HTTP Client>> {
+    + fetch_document_list(date: date) : list[dict]
+    + download_document(document_id: str) : bytes
+  }
+}
+
+' ========================
+' relationships (same as component)
+' ========================
+
+Edinet --> SyncDocumentsUseCase
+Edinet --> SearchDocumentsUseCase
+Edinet --> DownloadDocumentsUseCase
+
+SyncDocumentsUseCase --> FilingRepository
+SyncDocumentsUseCase --> EdinetApiClient
+
+SearchDocumentsUseCase --> FilingRepository
+DownloadDocumentsUseCase --> FilingRepository
+
+SQLiteFilingRepository ..|> FilingRepository
+DynamoFilingRepository ..|> FilingRepository
+
+FilingRepository --> Filing
+
+@enduml
