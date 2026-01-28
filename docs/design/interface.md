@@ -27,3 +27,38 @@ collection.get(docd="hgoehgeo")
 
 result.collection # provide same collection object from collect func result
 ```
+
+```python
+# custom collection partition
+import fino-eidnet-collector as fec, SpecField, CustomField
+
+fun ticker_generate(filing: FilingMetadata) -> str:
+    ticker = mapping_ticker_from_sec(filing.sec_code)
+
+    return ticker
+
+
+# customize directory partitions as user want to mangage
+collection_spec = fec.CollectionSpec(
+    partition=[
+        SpecFiled.SEC_CODE,
+        SpecFiled.DOCUMENT_TYPE,
+        SpecFiled.PERIOD_START,
+        CustomSpecField("ticker", ticker_generate)
+    ],
+    file_name=[
+        SpecFiled.DOCUMENT_ID,
+        SpecFiled.FORMAT_TYPE
+    ]
+)
+
+collection = fec.Collection(type="s3", spec=collection_spec)
+
+edinet = fec.Edinet(api_key="hogehgoehogheohoge", collection=collection)
+```
+
+\*\*
+
+- file pathの衝突はdoc_idをfile_nameに必須にすることで回避する
+- format typeによる衝突はdocument idで回避できない（単一doc idで複数のformatが存在する）ため、ファイルの拡張子prefixとして自動挿入する
+- \*\*
